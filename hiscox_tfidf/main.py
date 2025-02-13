@@ -1,10 +1,9 @@
-from functools import partial
-
 import spacy
 from fastapi import Depends, FastAPI
 from pydantic import BaseModel, Field
 
-from .text_utils import get_unique_words, tokenize_document
+from .doc_utils import tokenize_corpus, tokenize_document
+from .text_utils import get_unique_words
 from .tfidf_utils import compute_idf, compute_tfidf, term_frequency
 
 
@@ -61,8 +60,7 @@ def terf_frequency_route(document_payload: DocumentPayload, nlp=Depends(get_nlp)
 @app.post("/inverseDocumentFrequency", response_model=IDF_Response)
 def inverse_doc_frequency_route(corpus_payload: CorpusPayload, nlp=Depends(get_nlp)):
     corpus = corpus_payload.corpus
-    document_converter = partial(tokenize_document, nlp=nlp)
-    corpus_as_list_of_list_of_str = list(map(document_converter, corpus))
+    corpus_as_list_of_list_of_str = tokenize_corpus(corpus, nlp)
     unique_words = get_unique_words(corpus_as_list_of_list_of_str)
     idf_dict = compute_idf(
         corpus_as_list_of_list_of_str=corpus_as_list_of_list_of_str,

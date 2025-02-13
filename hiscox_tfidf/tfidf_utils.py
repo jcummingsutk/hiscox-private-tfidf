@@ -1,9 +1,9 @@
 from collections import Counter
 from dataclasses import dataclass
-from functools import partial
+from math import log
 
-from .doc_utils import SpacyModel
-from .text_utils import get_unique_words, inverse_document_frequency, tokenize_document
+from .doc_utils import SpacyModel, tokenize_corpus
+from .text_utils import get_unique_words, num_documents_word_appears
 
 
 @dataclass
@@ -18,6 +18,22 @@ def term_frequency(text=list[str]) -> dict[str, int]:
     return dict(tf)
 
 
+def inverse_document_frequency_single_word(
+    word: str, corpus_as_lists: list[list[str]]
+) -> float:
+    """For a corpus as a list of list of strings, returns log(N/df(word)), where
+    N is the amount of documents in the corpus and df(word) is the number of
+    documents where that word appears
+
+    Example: word = "cat", corpus_as_lists=[["dog", "cat"], ["cat", "bird"], ["bird", "dog"]],
+    return would be log(3/2)"""
+    df_word = float(
+        num_documents_word_appears(word=word, corpus_as_lists=corpus_as_lists)
+    )
+    N = float(len(corpus_as_lists))
+    return log(N / df_word)
+
+
 def compute_idf(
     corpus_as_list_of_list_of_str: list[list[str]], unique_words: list[str]
 ) -> dict[str, float]:
@@ -25,7 +41,7 @@ def compute_idf(
     return_idf_dict: dict[str, float] = {}
     for word in unique_words:
         try:
-            idf_word = inverse_document_frequency(
+            idf_word = inverse_document_frequency_single_word(
                 word=word,
                 corpus_as_lists=corpus_as_list_of_list_of_str,
             )
@@ -43,8 +59,10 @@ def compute_tfidf(
     nlp: SpacyModel,
 ) -> TFIDF_Info:
 
-    document_converter = partial(tokenize_document, nlp=nlp)
-    corpus_as_list_of_list_of_str = list(map(document_converter, corpus))
+    corpus_as_list_of_list_of_str = tokenize_corpus(
+        corpus=corpus,
+        nlp=nlp,
+    )
 
     unique_words = get_unique_words(corpus_as_list_of_list_of_str)
 
